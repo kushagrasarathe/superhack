@@ -1,18 +1,41 @@
-import { FrameRequest, getFrameMessage, getFrameHtmlResponse } from '@coinbase/onchainkit/frame';
+import {
+  FrameRequest,
+  FrameValidationData,
+  getFrameHtmlResponse,
+} from '@coinbase/onchainkit/frame';
 import { NextRequest, NextResponse } from 'next/server';
 import { NEXT_PUBLIC_URL } from '../../config';
 import { createPublicClient, http, fromHex } from 'viem';
 import { baseSepolia } from 'viem/chains';
+import { getFrameMessage } from 'frames.js';
 
 async function getResponse(req: NextRequest): Promise<NextResponse> {
-  const body: FrameRequest = await req.json();
-  const { isValid } = await getFrameMessage(body);
+  const body = await req.json();
+  console.log('Body:', body);
 
-  if (!isValid) {
-    return new NextResponse('Message not valid', { status: 500 });
+  const message = body.untrustedData;
+
+  console.log('Message:', message);
+
+  let state = {
+    page: 0,
+    type: null,
+    amount: 0,
+    message: null,
+    username: null,
+  };
+
+  try {
+    if (message.state) {
+      state = JSON.parse(decodeURIComponent(message.state));
+    }
+  } catch (e) {
+    console.error(e);
   }
 
-  const txId = body?.untrustedData?.transactionId;
+  console.log(state);
+
+  const txId = message.transactionId;
 
   if (!txId) {
     return new NextResponse('No transaction id', { status: 400 });

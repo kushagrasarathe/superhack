@@ -1,22 +1,37 @@
-import { FrameRequest, getFrameMessage } from '@coinbase/onchainkit/frame';
+import { FrameRequest } from '@coinbase/onchainkit/frame';
 import { NextRequest, NextResponse } from 'next/server';
 import { encodeFunctionData, parseEther } from 'viem';
 import { baseSepolia } from 'viem/chains';
 
 import GiftCardABI from '../../_contracts/GiftCardABI';
 import { GIFT_CARD_ADDR } from '../../config';
-import type { FrameTransactionResponse } from '@coinbase/onchainkit/frame';
+import type { FrameTransactionResponse, FrameValidationData } from '@coinbase/onchainkit/frame';
 import { getETHUSDPrice } from '../../../utils/pythMethods';
+import { getFrameFlattened, getFrameMessage } from 'frames.js';
 
 async function getResponse(req: NextRequest): Promise<NextResponse | Response> {
-  const body: FrameRequest = await req.json();
-  // Remember to replace 'NEYNAR_ONCHAIN_KIT' with your own Neynar API key
-  const { isValid, message } = await getFrameMessage(body, { neynarApiKey: 'NEYNAR_ONCHAIN_KIT' });
+  const body = await req.json();
+  console.log('Body:', body);
 
-  if (!isValid) {
-    return new NextResponse('Message not valid', { status: 500 });
+  const message = body.untrustedData;
+
+  console.log('Message:', message);
+
+  let state = {
+    page: 0,
+    type: null,
+    amount: 0,
+    message: null,
+    username: null,
+  };
+
+  try {
+    if (message.state) {
+      state = JSON.parse(decodeURIComponent(message.state));
+    }
+  } catch (e) {
+    console.error(e);
   }
-  const state = JSON.parse(decodeURIComponent(message.state?.serialized));
 
   if (!state.amount || !state.username || !state.message) {
     return new NextResponse('Invalid state', { status: 400 });
@@ -25,18 +40,19 @@ async function getResponse(req: NextRequest): Promise<NextResponse | Response> {
   const eth_usdprice = await getETHUSDPrice();
 
   const sender = message.address as `0x${string}`;
+
+  console.log('ETH/USD Price:', eth_usdprice);
+  console.log('Amount', state.amount);
   const amountInETH = Number(state.amount) / Number(eth_usdprice);
+  console.log('Amount in ETH:', amountInETH);
   const amount = parseEther(amountInETH.toString());
 
-  //   --url 'https://api.neynar.com/v1/farcaster/user-by-username?username=0xdhruv&viewerFid=3' \
-  //  --header 'accept: application/json' \
-  //  --header 'api_key: NEYNAR_API_DOCS'
   const res = await fetch(
     `https://api.neynar.com/v1/farcaster/user-by-username?username=${state.username}`,
     {
       headers: {
         accept: 'application/json',
-        api_key: 'NEYNAR_API_DOCS',
+        api_key: 'NEYANR_API_DOCS',
       },
     },
   );

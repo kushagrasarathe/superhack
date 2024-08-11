@@ -17,7 +17,7 @@ export const getETHUSDPrice = async () => {
       return;
     }
     const price = currentPrices[0].getPriceUnchecked();
-    const ethUsd = formatUnits(BigInt(price.price), price.expo);
+    const ethUsd = formatUnits(BigInt(price.price), 8);
     return ethUsd;
   } catch (error) {
     console.log(error);

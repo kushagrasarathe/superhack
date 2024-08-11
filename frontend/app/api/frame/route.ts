@@ -1,14 +1,19 @@
-import { FrameRequest, getFrameMessage, getFrameHtmlResponse } from '@coinbase/onchainkit/frame';
+import {
+  FrameRequest,
+  getFrameMessage,
+  getFrameHtmlResponse,
+  FrameValidationData,
+} from '@coinbase/onchainkit/frame';
 import { NextRequest, NextResponse } from 'next/server';
 import { NEXT_PUBLIC_URL } from '../../config';
 
 async function getResponse(req: NextRequest): Promise<NextResponse> {
-  const body: FrameRequest = await req.json();
-  const { isValid, message } = await getFrameMessage(body, { neynarApiKey: 'NEYNAR_ONCHAIN_KIT' });
+  const body = await req.json();
+  console.log('Body:', body);
 
-  if (!isValid) {
-    return new NextResponse('Message not valid', { status: 500 });
-  }
+  const message = body.untrustedData;
+
+  console.log('Message:', message);
 
   let state = {
     page: 0,
@@ -19,28 +24,20 @@ async function getResponse(req: NextRequest): Promise<NextResponse> {
   };
 
   try {
-    state = JSON.parse(decodeURIComponent(message.state?.serialized));
+    state = JSON.parse(decodeURIComponent(message.state));
   } catch (e) {
     console.error(e);
   }
 
-  // /**
-  //  * Use this code to redirect to a different page
-  //  */
-  // if (message?.button === 3) {
-  //   return NextResponse.redirect(
-  //     'https://www.google.com/search?q=cute+dog+pictures&tbm=isch&source=lnms',
-  //     { status: 302 },
-  //   );
-  // }
+  console.log(state);
 
   if (state.page === 0) {
     const type =
-      message.button === 0
+      message.buttonIndex === 0
         ? 'Birthday'
-        : message.button === 1
+        : message.buttonIndex === 1
           ? 'Christmas'
-          : message.button === 2
+          : message.buttonIndex === 2
             ? 'Graduation'
             : 'Diwali';
     return new NextResponse(
@@ -81,7 +78,7 @@ async function getResponse(req: NextRequest): Promise<NextResponse> {
         state: {
           page: state?.page + 1,
           type: state?.type,
-          amount: message.input,
+          amount: message.inputText,
         },
       }),
     );
@@ -104,12 +101,12 @@ async function getResponse(req: NextRequest): Promise<NextResponse> {
           page: state?.page + 1,
           type: state?.type,
           amount: state?.amount,
-          message: message.input,
+          message: message.inputText,
         },
       }),
     );
   } else if (state.page === 3) {
-    const username = message.input;
+    const username = message.inputText;
     return new NextResponse(
       getFrameHtmlResponse({
         buttons: [

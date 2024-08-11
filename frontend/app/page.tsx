@@ -27,6 +27,9 @@ const frameMetadata = getFrameMetadata({
     src: `${NEXT_PUBLIC_URL}/park-3.png`, // TODO: Add the initial image
     aspectRatio: '1:1',
   },
+  state: {
+    page: 0,
+  },
   // input: {
   //   text: 'Tell me a story',
   // },
